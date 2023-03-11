@@ -1,0 +1,121 @@
+---
+title: "Rmark"
+author: "Jay"
+date: '2023-03-10'
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## R Markdown
+
+This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
+
+When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
+
+```{r cars}
+summary(cars)
+```
+
+## Including Plots
+
+You can also embed plots, for example:
+
+```{r pressure, echo=FALSE}
+plot(pressure)
+```
+
+Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
+
+Simulated data:
+
+```{r sim_first}
+n <- 10
+slope <- 0.2
+noise.sd <- 0.25
+xy <- data.frame( x=rnorm(n))
+xy$y <- xy$x * slope + noise.sd*rnorm(n)
+summary(xy)
+```
+
+Now, fit a linear model:
+
+```{r fit_model}
+xy.lm <- lm( y ~ x, data=xy )
+summary(xy.lm)
+```
+
+Look at the results:
+
+```{r first_plot}
+plot( y ~ x, data=xy )
+abline(coef(xy.lm),col='red')
+```
+
+We'd like to do the above many times for a given sample size.
+
+```{r sim_many, fig.width=2*fig.dim}
+n <- 10
+slope <- 0.2
+noise.sd <- 0.25
+nreps <- 1000
+many.lms <- replicate( nreps, {
+        xy <- data.frame( x=rnorm(n))
+        xy$y <- xy$x * slope + noise.sd*rnorm(n)
+        xy.lm <- lm( y ~ x, data=xy )
+        return( coef(xy.lm) )
+    } )
+# hist the intercept and slope
+layout(t(1:2))
+hist( many.lms[1,], main="intercept" )
+hist( many.lms[2,], main="slope" )
+```
+
+Let's just look at a bunch of those lines, for fun:
+
+```{r many_lines}
+plot(0,type='n',xlab='',ylab='',xlim=c(-1,1),ylim=c(-1,1))
+for (k in 1:100) {
+    abline( many.lms[1,k], many.lms[2,k], col=adjustcolor("black",0.1) )
+}
+```
+
+## Systematic comparison
+
+First thing: *make a function*.
+
+```{r setup_sims}
+sim.many.lms <- function (n, nreps=1000) {
+    many.lms <- replicate( nreps, {
+            xy <- data.frame( x=rnorm(n))
+            xy$y <- xy$x * slope + noise.sd*rnorm(n)
+            xy.lm <- lm( y ~ x, data=xy )
+            return( coef(xy.lm) )
+        } )
+}
+```
+
+Now, apply it to the sample sizes of interest:
+
+```{r run_sims, cache=TRUE}
+n.vals <- floor(seq(10,500,length.out=10))
+sim.lms <- lapply( n.vals, sim.many.lms )
+```
+
+```{r plot_sims, fig.width=2*fig.dim}
+layout(t(1:2))
+for (k in seq_along(n.vals)) {
+    hist(sim.lms[[k]][1,], main=paste("intercepts, n=",n.vals[k]))
+    hist(sim.lms[[k]][2,], main=paste("slopes, n=",n.vals[k]))
+}
+```
+
+OK, let's summarize the results on slope:
+
+```{r show_slope, fig.width=2*fig.dim}
+layout(t(1:2))
+boxplot( lapply( sim.lms, function (x) x[2,] ), names=n.vals )
+plot(n.vals, sapply( sim.lms, function (x) sd(x[2,]) ), ylab="SD of slope" )
+```
