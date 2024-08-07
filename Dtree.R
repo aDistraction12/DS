@@ -13,11 +13,7 @@ model<- ctree(nativeSpeaker ~ ., train_data)
 plot(model)
 # testing the people who are native speakers
 # and those who are not
-predict_model<-predict(ctree_, test_data)
-
-# creates a table to count how many are classified
-# as native speakers and how many are not
-m_at=table(test_data$nativeSpeaker, predict_model)
-m_at
-ac_Test=sum(diag(table_mat)) / sum(table_mat)
+predict_model <- predict(model, test_data)
+m_at = table(test_data$nativeSpeaker, predict_model)
+ac_Test = sum(diag(m_at)) / sum(m_at)
 print(paste('Accuracy for test is found to be', ac_Test))
